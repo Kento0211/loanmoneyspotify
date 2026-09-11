@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="貸しているお金と利子の更新日をまとめて管理できるシンプルな利子計算ツール。">
+  <meta name="theme-color" content="#101827">
+  <title>Loan Ledger — 貸金・利子管理</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="ambient ambient-a"></div>
+  <div class="ambient ambient-b"></div>
+
+  <header class="topbar glass">
+    <a class="brand" href="#top" aria-label="Loan Ledger home">
+      <span class="brand-mark">¥</span>
+      <span>Loan Ledger</span>
+    </a>
+    <div class="header-actions">
+      <span id="syncStatus" class="sync-status">ローカル保存</span>
+      <button id="authButton" class="button button-ghost">ログイン</button>
+    </div>
+  </header>
+
+  <main id="top" class="container">
+    <section class="hero">
+      <div>
+        <p class="eyebrow">MONEY TRACKER</p>
+        <h1>貸したお金を、<br><span>迷わず管理。</span></h1>
+        <p class="hero-copy">金額・利率・更新日を登録するだけ。<br>今日までに発生した利子をすぐ確認できます。</p>
+      </div>
+      <div class="hero-stat glass">
+        <span>現在の貸付残高</span>
+        <strong id="heroTotal">¥0</strong>
+        <small id="heroInterest">累計利子 ¥0</small>
+      </div>
+    </section>
+
+    <section class="dashboard-grid">
+      <div class="main-column">
+        <section class="card glass">
+          <div class="section-heading">
+            <div>
+              <p class="section-kicker">01 / LOANS</p>
+              <h2>貸しているお金</h2>
+            </div>
+            <button id="addLoanButton" class="button button-primary">＋ 貸付を追加</button>
+          </div>
+          <div id="loanList" class="loan-list"></div>
+          <div id="emptyState" class="empty-state">
+            <div class="empty-icon">＋</div>
+            <h3>まだ貸付がありません</h3>
+            <p>「貸付を追加」から、相手・金額・利率・更新日を登録してください。</p>
+          </div>
+        </section>
+
+        <section class="card glass calendar-card">
+          <div class="section-heading">
+            <div>
+              <p class="section-kicker">02 / CALENDAR</p>
+              <h2>利子の更新カレンダー</h2>
+            </div>
+            <div class="calendar-nav">
+              <button id="prevMonth" class="icon-button" aria-label="前の月">‹</button>
+              <strong id="calendarTitle"></strong>
+              <button id="nextMonth" class="icon-button" aria-label="次の月">›</button>
+            </div>
+          </div>
+          <div class="calendar-legend">
+            <span><i class="dot dot-today"></i>今日</span>
+            <span><i class="dot dot-update"></i>利子更新日</span>
+          </div>
+          <div id="calendar" class="calendar"></div>
+        </section>
+      </div>
+
+      <aside class="side-column">
+        <section class="card glass calculator-card">
+          <p class="section-kicker">03 / CALCULATOR</p>
+          <h2>利子を確認</h2>
+          <label class="field-label" for="calcLoan">対象</label>
+          <select id="calcLoan" class="input"></select>
+          <label class="field-label" for="calcDate">計算基準日</label>
+          <input id="calcDate" class="input" type="date">
+          <div id="calculationResult" class="calculation-result"></div>
+        </section>
+
+        <section class="card glass summary-card">
+          <p class="section-kicker">04 / SUMMARY</p>
+          <h2>サマリー</h2>
+          <div class="summary-row"><span>貸付件数</span><strong id="summaryCount">0件</strong></div>
+          <div class="summary-row"><span>元金合計</span><strong id="summaryPrincipal">¥0</strong></div>
+          <div class="summary-row"><span>累計利子</span><strong id="summaryInterest">¥0</strong></div>
+          <div class="summary-row total"><span>合計</span><strong id="summaryTotal">¥0</strong></div>
+        </section>
+
+        <section class="card glass note-card">
+          <div class="note-icon">i</div>
+          <div>
+            <h3>計算について</h3>
+            <p>更新日を1回迎えるごとに、登録した利率分の利子が加算されるシンプルな方式です。</p>
+          </div>
+        </section>
+      </aside>
+    </section>
+  </main>
+
+  <dialog id="loanDialog" class="dialog">
+    <form id="loanForm" method="dialog" class="dialog-card glass">
+      <div class="dialog-header">
+        <div>
+          <p class="section-kicker">NEW LOAN</p>
+          <h2 id="dialogTitle">貸付を追加</h2>
+        </div>
+        <button type="button" id="closeDialog" class="icon-button">×</button>
+      </div>
+      <input type="hidden" id="loanId">
+      <div class="form-grid">
+        <label class="field"><span>相手の名前</span><input id="borrowerName" class="input" required maxlength="60" placeholder="例：田中さん"></label>
+        <label class="field"><span>貸している金額</span><input id="principal" class="input" required type="number" min="0" step="1" placeholder="50000"></label>
+        <label class="field"><span>利率</span><div class="inline-input"><input id="rate" class="input" required type="number" min="0" step="0.01" placeholder="5"><select id="rateUnit" class="input unit-select"><option value="monthly">月利</option><option value="yearly">年利</option></select></div></label>
+        <label class="field"><span>貸した日</span><input id="startDate" class="input" required type="date"></label>
+        <label class="field"><span>利子の更新日</span><input id="updateDate" class="input" required type="date"></label>
+        <label class="field"><span>メモ（任意）</span><input id="note" class="input" maxlength="120" placeholder="例：毎月10日に更新"></label>
+      </div>
+      <div class="form-help">更新日を迎えるたびに、元金 × 利率の利子が1回分として加算されます。</div>
+      <div class="dialog-actions">
+        <button type="button" id="cancelDialog" class="button button-ghost">キャンセル</button>
+        <button type="submit" class="button button-primary">保存する</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="authDialog" class="dialog">
+    <form id="authForm" method="dialog" class="dialog-card glass auth-card">
+      <div class="dialog-header">
+        <div>
+          <p class="section-kicker">ACCOUNT</p>
+          <h2 id="authTitle">ログイン</h2>
+        </div>
+        <button type="button" id="closeAuth" class="icon-button">×</button>
+      </div>
+      <p class="auth-description">ログインすると、貸付データを端末間で同期して保存できます。</p>
+      <label class="field"><span>メールアドレス</span><input id="authEmail" class="input" type="email" required autocomplete="email"></label>
+      <label class="field"><span>パスワード</span><input id="authPassword" class="input" type="password" required minlength="6" autocomplete="current-password"></label>
+      <p id="authMessage" class="auth-message"></p>
+      <div class="dialog-actions">
+        <button type="button" id="toggleAuthMode" class="button button-ghost">新規登録</button>
+        <button type="submit" id="authSubmit" class="button button-primary">ログイン</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" role="status"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
